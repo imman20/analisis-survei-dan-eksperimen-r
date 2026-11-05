@@ -13,7 +13,7 @@ agar kontribusi mudah ditinjau dan hasil tetap dapat direproduksi.
 4. Jalankan seluruh alur: `Rscript run_all.R`. Semua tes harus lulus dan ketiga laporan
    harus berhasil dirender.
 5. Jika angka hasil berubah, perbarui tabel **Hasil Utama** di `README.md` dengan angka
-   dari output yang baru — jangan pernah menulis angka yang tidak berasal dari eksekusi.
+   dari output yang baru. Jangan pernah menulis angka yang tidak berasal dari eksekusi.
 6. Ajukan *pull request* dengan penjelasan singkat "apa" dan "mengapa".
 
 ## Gaya kode

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# requirements.R — memasang paket yang dibutuhkan dengan versi yang sama persis
+# requirements.R: memasang paket yang dibutuhkan dengan versi yang sama persis
 # seperti saat laporan ini dibuat (hasil packageVersion() pada lingkungan asal).
 #
 # Cara pakai:  Rscript requirements.R

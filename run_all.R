@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# run_all.R — jalankan seluruh alur kerja dari awal sampai akhir:
+# run_all.R: jalankan seluruh alur kerja dari awal sampai akhir:
 #   1. bangkitkan data simulasi  -> data/raw/*.csv
 #   2. render tiga laporan R Markdown -> reports/*.html (+ gambar di assets/)
 #   3. buat gambar hero untuk README -> assets/hero.png

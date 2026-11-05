@@ -4,7 +4,7 @@ Semua berkas berada di `data/raw/` dan dibangkitkan oleh `R/simulate_data.R`
 (`set.seed(2024)`). Data **bukan** data nyata; parameter pembangkitnya dijelaskan di
 [`metodologi.md`](metodologi.md) dan di README.
 
-## 1. `survey_kepuasan.csv` — 400 baris × 25 kolom
+## 1. `survey_kepuasan.csv`: 400 baris × 25 kolom
 
 | Kolom | Tipe | Nilai | Keterangan |
 |---|---|---|---|
@@ -22,7 +22,7 @@ Semua berkas berada di `data/raw/` dan dibangkitkan oleh `R/simulate_data.R`
 Skala Likert: 1 = sangat tidak setuju, 2 = tidak setuju, 3 = netral, 4 = setuju, 5 = sangat setuju.
 Item `emp_4` sengaja disimulasikan dengan loading rendah (0,35) sebagai item bermasalah.
 
-## 2. `eksperimen_faktorial.csv` — 30 baris × 5 kolom
+## 2. `eksperimen_faktorial.csv`: 30 baris × 5 kolom
 
 | Kolom | Tipe | Nilai | Keterangan |
 |---|---|---|---|
@@ -35,7 +35,7 @@ Item `emp_4` sengaja disimulasikan dengan loading rendah (0,35) sebagai item ber
 Rata-rata sel yang ditanam (MPa): 150/A = 40, 175/A = 46, 200/A = 48, 150/B = 47, 175/B = 50,
 200/B = 49; galat N(0, 2,2²).
 
-## 3. `spc_fase1.csv` — 125 baris × 4 kolom; `spc_fase2.csv` — 75 baris × 4 kolom
+## 3. `spc_fase1.csv`: 125 baris × 4 kolom; `spc_fase2.csv` - 75 baris × 4 kolom
 
 | Kolom | Tipe | Nilai | Keterangan |
 |---|---|---|---|
@@ -45,9 +45,9 @@ Rata-rata sel yang ditanam (MPa): 150/A = 40, 175/A = 46, 200/A = 48, 150/B = 47
 | `diameter` | numerik | ≈ 49,4–50,7 | Diameter poros (mm); target 50,00, spesifikasi 49,35–50,65 |
 
 Fase I: N(50,00; 0,20²) stabil. Fase II: subgrup 1–5 N(50,00; 0,20²), subgrup 6–15
-N(50,15; 0,20²) — pergeseran +0,75σ.
+N(50,15; 0,20²), pergeseran +0,75σ.
 
-## 4. `spc_atribut.csv` — 30 baris × 3 kolom
+## 4. `spc_atribut.csv`: 30 baris × 3 kolom
 
 | Kolom | Tipe | Nilai | Keterangan |
 |---|---|---|---|

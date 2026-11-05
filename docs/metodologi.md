@@ -14,7 +14,7 @@ perhitungan dan keluaran lengkap ada di laporan HTML pada folder `reports/`.
 3. **Simulasi dengan struktur yang diketahui**: karena "jawaban benar" diketahui (misal 5 faktor,
    satu item lemah, pergeseran +0,75σ), pembaca bisa menilai apakah prosedur analisis bekerja.
 
-## Modul 1 — Survei kepuasan (SERVQUAL)
+## Modul 1: Survei kepuasan (SERVQUAL)
 
 | Tahap | Metode | Alasan pemilihan |
 |---|---|---|
@@ -30,7 +30,7 @@ Catatan: EFA memakai korelasi Pearson pada data Likert 5 kategori. Korelasi poli
 tepat secara teori, tetapi dengan 5 kategori dan n = 400 perbedaannya kecil; ini dicatat sebagai
 keterbatasan di README.
 
-## Modul 2 — Desain eksperimen faktorial
+## Modul 2: Desain eksperimen faktorial
 
 | Tahap | Metode | Alasan pemilihan |
 |---|---|---|
@@ -41,7 +41,7 @@ keterbatasan di README.
 | Ukuran efek | Eta-squared parsial | Standar pelaporan APA; memisahkan kontribusi tiap efek dari galat |
 | Pembanding | Kruskal-Wallis dan Wilcoxon | Alternatif bila asumsi normalitas tidak terpenuhi; juga mengilustrasikan hilangnya daya uji bila interaksi diabaikan |
 
-## Modul 3 — Statistical Process Control
+## Modul 3: Statistical Process Control
 
 | Tahap | Metode | Alasan pemilihan |
 |---|---|---|

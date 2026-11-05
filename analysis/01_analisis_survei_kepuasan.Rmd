@@ -1,5 +1,5 @@
 ---
-title: "Modul 1 — Analisis Survei Kepuasan Pelanggan (SERVQUAL)"
+title: "Modul 1: Analisis Survei Kepuasan Pelanggan (SERVQUAL)"
 author: "Immantaka Juniarsa"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -303,7 +303,7 @@ alpha_min <- alpha_tbl[which.min(alpha_tbl$alpha_manual), ]
 4. **Perbaikan instrumen**: revisi atau ganti item `emp_4` sebelum survei berikutnya.
 
 ### Padanan di SPSS / Minitab
-Lihat `docs/padanan_spss_minitab.md` — misalnya alpha = *Analyze › Scale › Reliability
+Lihat `docs/padanan_spss_minitab.md`, misalnya alpha = *Analyze › Scale › Reliability
 Analysis* (SPSS) atau *Stat › Multivariate › Item Analysis* (Minitab).
 
 ```{r session-info, echo=FALSE}

@@ -1,5 +1,5 @@
 ---
-title: "Modul 2 — Desain Eksperimen Faktorial dan ANOVA Dua Arah"
+title: "Modul 2: Desain Eksperimen Faktorial dan ANOVA Dua Arah"
 author: "Immantaka Juniarsa"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -259,7 +259,7 @@ worst <- cell_stats %>% arrange(mean) %>% slice(1)
 3. **Kombinasi terbaik**: `r best$temperature` + `r best$material` (rata-rata
    `r best$mean` MPa) versus terlemah `r worst$temperature` + `r worst$material` (`r worst$mean` MPa).
 4. **Implikasi biaya**: jika Bahan B lebih mahal, proses pada 200 °C dengan Bahan A memberi kekuatan
-   yang secara statistik setara dengan Bahan B — peluang penghematan tanpa mengorbankan mutu.
+   yang secara statistik setara dengan Bahan B. Ini peluang penghematan tanpa mengorbankan mutu.
 5. **Langkah lanjut**: rancangan *response surface* di sekitar 175–200 °C untuk mencari suhu optimum,
    dan replikasi lebih banyak untuk mempersempit interval kepercayaan.
 

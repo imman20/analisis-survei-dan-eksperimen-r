@@ -1,5 +1,5 @@
 ---
-title: "Modul 3 — Statistical Process Control (SPC) dan Analisis Kapabilitas"
+title: "Modul 3: Statistical Process Control (SPC) dan Analisis Kapabilitas"
 author: "Immantaka Juniarsa"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -131,8 +131,8 @@ invisible(grDevices::dev.off())
 | Cp  | `r round(cap$Cp, 3)`  | `r round(pc$indices["Cp", 1], 3)`  | Potensi proses jika terpusat (σ within) |
 | Cpk | `r round(cap$Cpk, 3)` | `r round(pc$indices["Cp_k", 1], 3)` | Kapabilitas aktual, memperhitungkan posisi rata-rata |
 | Cpm | `r round(cap$Cpm, 3)` | `r round(pc$indices["Cpm", 1], 3)` | Penalti terhadap deviasi dari target |
-| Pp  | `r round(cap$Pp, 3)`  | — | Potensi jangka panjang (σ overall) |
-| Ppk | `r round(cap$Ppk, 3)` | — | Kinerja jangka panjang |
+| Pp  | `r round(cap$Pp, 3)`  | - | Potensi jangka panjang (σ overall) |
+| Ppk | `r round(cap$Ppk, 3)` | - | Kinerja jangka panjang |
 
 Perkiraan unit di luar spesifikasi: **`r round(cap$ppm_expected, 0)` ppm**
 (`r round(cap$ppm_expected / 1e4, 3)` %). Rasio σ overall / σ within =
@@ -153,7 +153,7 @@ p_cap
 simpan_grafik(p_cap, "03_kapabilitas_proses")
 ```
 
-**Interpretasi:** Cpk `r ifelse(cap$Cpk >= 1.33, ">= 1,33 — proses kapabel menurut standar industri umum.", ifelse(cap$Cpk >= 1, "berada di antara 1,00 dan 1,33 — proses marginal: memenuhi spesifikasi tetapi tanpa margin aman; pengurangan variasi diperlukan untuk mencapai target 1,33.", "< 1,00 — proses tidak kapabel."))`
+**Interpretasi:** Cpk `r ifelse(cap$Cpk >= 1.33, ">= 1,33, proses kapabel menurut standar industri umum.", ifelse(cap$Cpk >= 1, "berada di antara 1,00 dan 1,33, proses marginal: memenuhi spesifikasi tetapi tanpa margin aman; pengurangan variasi diperlukan untuk mencapai target 1,33.", "< 1,00, proses tidak kapabel."))`
 Karena Cp ≈ Cpk, masalahnya bukan pemusatan melainkan **lebar variasi** relatif terhadap toleransi.
 
 ## 4. Peta p untuk atribut cacat
@@ -184,7 +184,7 @@ knitr::kable(att %>% mutate(p = round(pl$p, 4), status = ifelse(pl$out_of_contro
 ## 5. Fase II: pemantauan dan deteksi pergeseran
 
 Batas kendali **fase I dibekukan** dan diterapkan pada 15 subgrup baru. Pergeseran yang
-ditanam hanya 0,75σ — peta Shewhart klasik (aturan 1) lambat mendeteksinya, sehingga
+ditanam hanya 0,75σ. Peta Shewhart klasik (aturan 1) lambat mendeteksinya, sehingga
 aturan Western Electric dan peta CUSUM dipakai sebagai pelengkap.
 
 ```{r fase2}
@@ -246,7 +246,7 @@ detek <- if (is.na(first_signal)) "belum" else sprintf("pada subgrup ke-%d (%d s
 1. **Proses fase I stabil** dan batas kendali (X-bar: `r round(lim$xbar_lcl, 3)`–`r round(lim$xbar_ucl, 3)` mm;
    R: 0–`r round(lim$r_ucl, 3)` mm) layak dijadikan standar pemantauan.
 2. **Kapabilitas marginal** (Cpk = `r round(cap$Cpk, 2)`, ≈ `r round(cap$ppm_expected)` ppm). Target Cpk ≥ 1,33 menuntut
-   σ within turun dari `r round(lim$sigma_within, 3)` ke ≤ `r round((USL - LSL) / (6 * 1.33), 3)` mm —
+   σ within turun dari `r round(lim$sigma_within, 3)` ke ≤ `r round((USL - LSL) / (6 * 1.33), 3)` mm. Karena itu,
    prioritaskan pengurangan variasi (kalibrasi alat, keausan pahat, bahan baku), bukan penyetelan pusat.
 3. **Pergeseran kecil +0,75σ** pada fase II terdeteksi aturan Western Electric `r detek`; peta Shewhart
    aturan 1 saja `r if (any(we2$rule1)) "juga mendeteksinya" else "tidak mendeteksinya"`. Terapkan aturan

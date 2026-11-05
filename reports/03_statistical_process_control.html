@@ -13,7 +13,7 @@
 
 <meta name="date" content="2026-11-05" />
 
-<title>Modul 3 — Statistical Process Control (SPC) dan Analisis Kapabilitas</title>
+<title>Modul 3: Statistical Process Control (SPC) dan Analisis Kapabilitas</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -2892,7 +2892,7 @@ border-radius: 0px;
 
 
 
-<h1 class="title toc-ignore">Modul 3 — Statistical Process Control (SPC)
+<h1 class="title toc-ignore">Modul 3: Statistical Process Control (SPC)
 dan Analisis Kapabilitas</h1>
 <h4 class="author">Immantaka Juniarsa</h4>
 <h4 class="date">05 November 2026</h4>
@@ -3192,13 +3192,13 @@ invisible(grDevices::dev.off())</code></pre>
 <tr class="even">
 <td>Pp</td>
 <td>1.063</td>
-<td>—</td>
+<td>-</td>
 <td>Potensi jangka panjang (σ overall)</td>
 </tr>
 <tr class="odd">
 <td>Ppk</td>
 <td>1.038</td>
-<td>—</td>
+<td>-</td>
 <td>Kinerja jangka panjang</td>
 </tr>
 </tbody>
@@ -3224,7 +3224,7 @@ Histogram fase I dengan batas spesifikasi
 </p>
 </div>
 <pre class="r"><code>simpan_grafik(p_cap, &quot;03_kapabilitas_proses&quot;)</code></pre>
-<p><strong>Interpretasi:</strong> Cpk berada di antara 1,00 dan 1,33 —
+<p><strong>Interpretasi:</strong> Cpk berada di antara 1,00 dan 1,33,
 proses marginal: memenuhi spesifikasi tetapi tanpa margin aman;
 pengurangan variasi diperlukan untuk mencapai target 1,33. Karena Cp ≈
 Cpk, masalahnya bukan pemusatan melainkan <strong>lebar variasi</strong>
@@ -3301,7 +3301,7 @@ lot_ooc &lt;- att$lot[pl$out_of_control]</code></pre>
 <div id="fase-ii-pemantauan-dan-deteksi-pergeseran" class="section level2">
 <h2>5. Fase II: pemantauan dan deteksi pergeseran</h2>
 <p>Batas kendali <strong>fase I dibekukan</strong> dan diterapkan pada
-15 subgrup baru. Pergeseran yang ditanam hanya 0,75σ — peta Shewhart
+15 subgrup baru. Pergeseran yang ditanam hanya 0,75σ. Peta Shewhart
 klasik (aturan 1) lambat mendeteksinya, sehingga aturan Western Electric
 dan peta CUSUM dipakai sebagai pelengkap.</p>
 <pre class="r"><code>xbar2 &lt;- rowMeans(m2); r2 &lt;- apply(m2, 1, function(v) max(v) - min(v))
@@ -3452,9 +3452,9 @@ subgrup 6–15 = 50.198 mm vs garis tengah 49.985 mm (selisih 0.213 mm ≈
 <li><strong>Proses fase I stabil</strong> dan batas kendali (X-bar:
 49.72–50.25 mm; R: 0–0.972 mm) layak dijadikan standar pemantauan.</li>
 <li><strong>Kapabilitas marginal</strong> (Cpk = 1.07, ≈ 1041 ppm).
-Target Cpk ≥ 1,33 menuntut σ within turun dari 0.198 ke ≤ 0.163 mm —
-prioritaskan pengurangan variasi (kalibrasi alat, keausan pahat, bahan
-baku), bukan penyetelan pusat.</li>
+Target Cpk ≥ 1,33 menuntut σ within turun dari 0.198 ke ≤ 0.163 mm.
+Karena itu, prioritaskan pengurangan variasi (kalibrasi alat, keausan
+pahat, bahan baku), bukan penyetelan pusat.</li>
 <li><strong>Pergeseran kecil +0,75σ</strong> pada fase II terdeteksi
 aturan Western Electric pada subgrup ke-6 (0 subgrup setelah pergeseran
 dimulai); peta Shewhart aturan 1 saja juga mendeteksinya. Terapkan

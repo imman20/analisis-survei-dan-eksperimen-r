@@ -81,14 +81,14 @@ Uraian keputusan metodologis dan alasannya: [`docs/metodologi.md`](docs/metodolo
 
 Semua angka di bawah diambil langsung dari laporan yang dirender oleh `run_all.R`.
 
-### Modul 1 — Survei kepuasan (n = 400)
+### Modul 1: Survei kepuasan (n = 400)
 
 | Dimensi | Cronbach's alpha | Interpretasi | Item dengan r item-total < 0,30 |
 |---|---|---|---|
-| Tangibles | 0,759 | Dapat diterima | — |
-| Reliability | 0,833 | Baik | — |
-| Responsiveness | 0,816 | Baik | — |
-| Assurance | 0,700 | Dapat diterima | — |
+| Tangibles | 0,759 | Dapat diterima | - |
+| Reliability | 0,833 | Baik | - |
+| Responsiveness | 0,816 | Baik | - |
+| Assurance | 0,700 | Dapat diterima | - |
 | Empathy | 0,650 (0,684 tanpa `emp_4`) | Dipertanyakan | `emp_4` (r = 0,280) |
 
 - KMO = 0,876; Bartlett χ² = 2463,3 (df = 190), p < 0,001 → data layak difaktorkan.
@@ -106,9 +106,9 @@ Semua angka di bawah diambil langsung dari laporan yang dirender oleh `run_all.R
 
 **Insight:** (1) instrumen reliabel dan struktur 5 dimensi terkonfirmasi; (2) prosedur validitas
 berhasil menangkap satu-satunya item yang sengaja dilemahkan; (3) Reliability dan Responsiveness
-adalah pendorong kepuasan terkuat — prioritas perbaikan layanan ada di dua dimensi ini.
+adalah pendorong kepuasan terkuat, sehingga prioritas perbaikan layanan ada di dua dimensi ini.
 
-### Modul 2 — Eksperimen faktorial 3 × 2 (30 run)
+### Modul 2: Eksperimen faktorial 3 × 2 (30 run)
 
 | Sumber | F | p-value | η² parsial |
 |---|---|---|---|
@@ -120,27 +120,27 @@ adalah pendorong kepuasan terkuat — prioritas perbaikan layanan ada di dua dim
 - Tukey HSD: Bahan B lebih kuat dari A sebesar **+5,71 MPa pada 150 °C** (p = 0,012), +3,61 MPa pada
   175 °C (p = 0,210), dan **−1,56 MPa pada 200 °C** (p = 0,906). Sel terbaik: 200 °C + Bahan A (49,18 MPa).
 - Kruskal-Wallis untuk suhu: H = 8,10, p = 0,017 (konsisten dengan ANOVA). Wilcoxon untuk bahan
-  (p = 0,110) tidak signifikan karena mengabaikan suhu dan interaksi — ilustrasi mengapa rancangan
+  (p = 0,110) tidak signifikan karena mengabaikan suhu dan interaksi. Ini ilustrasi mengapa rancangan
   faktorial lebih efisien.
 
 **Insight:** (1) keunggulan Bahan B hanya berlaku pada suhu rendah; (2) pada 200 °C Bahan A yang
-lebih murah memberi kekuatan setara atau lebih tinggi — peluang penghematan tanpa mengorbankan mutu;
+lebih murah memberi kekuatan setara atau lebih tinggi. Ini peluang penghematan tanpa mengorbankan mutu;
 (3) rekomendasi bahan tidak boleh dibuat tanpa menyebut suhu operasi.
 
-### Modul 3 — SPC (diameter poros, spesifikasi 49,35–50,65 mm)
+### Modul 3: SPC (diameter poros, spesifikasi 49,35–50,65 mm)
 
 | Statistik | Nilai |
 |---|---|
-| Peta X-bar fase I (CL / LCL / UCL) | 49,985 / 49,720 / 50,250 mm — 0 sinyal dari 25 subgrup |
-| Peta R fase I (CL / UCL) | 0,460 / 0,972 mm — 0 sinyal |
+| Peta X-bar fase I (CL / LCL / UCL) | 49,985 / 49,720 / 50,250 mm, 0 sinyal dari 25 subgrup |
+| Peta R fase I (CL / UCL) | 0,460 / 0,972 mm, 0 sinyal |
 | σ within (R-bar/d2) | 0,198 mm |
 | **Cp / Cpk** | **1,096 / 1,071** (qcc: 1,096 / 1,071) |
 | Pp / Ppk / Cpm | 1,063 / 1,038 / 1,093 |
 | Perkiraan di luar spesifikasi | 1.041 ppm (0,10 %) |
-| Peta p (p-bar / UCL) | 0,0372 / 0,0773 — lot **18 dan 19** di luar kendali |
+| Peta p (p-bar / UCL) | 0,0372 / 0,0773, lot **18 dan 19** di luar kendali |
 | Deteksi pergeseran fase II (mulai subgrup 6) | Western Electric: subgrup 6 (aturan 2); Shewhart 3σ saja: subgrup 8; CUSUM: subgrup 8 |
 
-**Insight:** (1) proses stabil tetapi kapabilitasnya **marginal** (Cpk 1,07 < 1,33) — perlu
+**Insight:** (1) proses stabil tetapi kapabilitasnya **marginal** (Cpk 1,07 < 1,33), sehingga perlu
 pengurangan variasi, bukan penyetelan pusat, karena Cp ≈ Cpk; (2) aturan Western Electric dan CUSUM
 mendeteksi pergeseran 0,75σ lebih cepat daripada batas 3σ saja; (3) lonjakan cacat lot 18–19
 terdeteksi peta p dan harus diinvestigasi sebagai penyebab khusus.
@@ -233,7 +233,7 @@ estimator sigma).
   besar dari nominal 0,75σ karena variasi acak, dan sinyal Western Electric pertama pada subgrup 6
   terbantu satu titik acak di subgrup 5 yang melampaui 2σ. Simulasi ulang dengan banyak replikasi
   (studi ARL) diperlukan untuk membandingkan kinerja deteksi secara adil.
-- Belum ada peta EWMA, analisis *gauge R&R*, atau *dashboard* interaktif (Shiny) — kandidat
+- Belum ada peta EWMA, analisis *gauge R&R*, atau *dashboard* interaktif (Shiny). Ketiganya kandidat
   pengembangan berikutnya.
 
 ## Lisensi
@@ -242,5 +242,5 @@ Kode dan dokumentasi dilisensikan di bawah [MIT License](LICENSE) © 2025 Immant
 
 ## Kontak
 
-**Immantaka Juniarsa** — S1 Statistika, Universitas Airlangga (2024)
+**Immantaka Juniarsa**, S1 Statistika, Universitas Airlangga (2024)
 GitHub: [@imman20](https://github.com/imman20) · Email: immantakajuniarsa30@gmail.com
