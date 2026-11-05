@@ -1,0 +1,47 @@
+# CI: memastikan tes unit lulus dan ketiga laporan R Markdown dapat dirender
+# pada R rilis terbaru di Ubuntu. Dependensi dibaca dari DESCRIPTION.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      R_KEEP_PKG_SOURCE: no
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+          use-public-rspm: true
+
+      - name: Pasang dependensi (dari DESCRIPTION)
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::testthat, any::rmarkdown
+          needs: check
+
+      - name: Jalankan tes unit
+        run: Rscript -e 'testthat::test_dir("tests/testthat", reporter = "summary", stop_on_failure = TRUE)'
+
+      - name: Bangkitkan data dan render laporan
+        run: Rscript run_all.R
+
+      - name: Unggah laporan HTML sebagai artefak
+        uses: actions/upload-artifact@v4
+        with:
+          name: laporan-html
+          path: reports/*.html
+          retention-days: 14
