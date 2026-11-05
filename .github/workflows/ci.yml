@@ -4,7 +4,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "penyempurnaan/**"]
   pull_request:
     branches: [main]
 
@@ -32,6 +32,9 @@ jobs:
         with:
           extra-packages: any::testthat, any::rmarkdown
           needs: check
+
+      - name: Periksa sintaks sumber R
+        run: Rscript -e 'invisible(lapply(c(list.files("R", pattern = "[.]R$", full.names = TRUE), "run_all.R", "requirements.R"), function(f) parse(file = f)))'
 
       - name: Jalankan tes unit
         run: Rscript -e 'testthat::test_dir("tests/testthat", reporter = "summary", stop_on_failure = TRUE)'

@@ -9,6 +9,10 @@ kapabilitas** untuk pengendalian mutu produksi.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/imman20/analisis-survei-dan-eksperimen-r/actions/workflows/ci.yml/badge.svg)](https://github.com/imman20/analisis-survei-dan-eksperimen-r/actions/workflows/ci.yml)
 
+## English summary
+
+I use reproducible simulated data to demonstrate survey analysis, factorial experiments, and statistical process control in R. I evaluate reliability and factor structure for 400 survey respondents and fit an ordinal satisfaction model. In the 30-run experiment, the temperature-by-material interaction has a p-value of 0.0077. The process study estimates Cpk at 1.071, which indicates marginal capability despite initial stability. I reproduce the reports and unit tests with `Rscript run_all.R` after installing the documented R packages.
+
 ![Ringkasan tiga modul: Cronbach's alpha per dimensi, interaction plot suhu × bahan, dan peta X-bar fase I–II](assets/hero.png)
 
 ## Daftar Isi

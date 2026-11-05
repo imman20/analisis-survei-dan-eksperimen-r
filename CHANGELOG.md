@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+- Saya menambahkan English summary, memeriksa tautan README, dan mendokumentasikan verifikasi penyempurnaan.
+
+## [v1.0.0] - Rilis dasar
+
+- Saya menandai commit merge dasar sebelum penyempurnaan dokumentasi dan kesiapan demo.
+
 Semua perubahan penting pada proyek ini dicatat di berkas ini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan proyek ini
 menganut [Semantic Versioning](https://semver.org/lang/id/).
