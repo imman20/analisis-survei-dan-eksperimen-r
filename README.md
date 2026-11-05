@@ -145,8 +145,7 @@ lebih murah memberi kekuatan setara atau lebih tinggi. Ini peluang penghematan t
 | Deteksi pergeseran fase II (mulai subgrup 6) | Western Electric: subgrup 6 (aturan 2); Shewhart 3σ saja: subgrup 8; CUSUM: subgrup 8 |
 
 **Insight:** (1) proses stabil tetapi kapabilitasnya **marginal** (Cpk 1,07 < 1,33), sehingga perlu
-pengurangan variasi, bukan penyetelan pusat, karena Cp ≈ Cpk; (2) aturan Western Electric dan CUSUM
-mendeteksi pergeseran 0,75σ lebih cepat daripada batas 3σ saja; (3) lonjakan cacat lot 18–19
+pengurangan variasi, bukan penyetelan pusat, karena Cp ≈ Cpk; (2) aturan Western Electric mendeteksi pergeseran 0,75σ pada subgrup 6, lebih cepat daripada batas 3σ saja; CUSUM dan batas 3σ sama-sama memberi sinyal pada subgrup 8; (3) lonjakan cacat lot 18–19
 terdeteksi peta p dan harus diinvestigasi sebagai penyebab khusus.
 
 ## Struktur Folder

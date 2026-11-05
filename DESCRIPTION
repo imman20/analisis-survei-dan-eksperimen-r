@@ -24,5 +24,6 @@ Imports:
     knitr (>= 1.45)
 Suggests:
     testthat (>= 3.2.1),
-    renv
+    renv,
+    lintr (>= 3.1.2)
 Config/testthat/edition: 3
