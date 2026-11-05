@@ -1,0 +1,28 @@
+Package: analisis.survei.dan.eksperimen
+Type: Project
+Title: Portofolio Analisis Survei, Desain Eksperimen, dan Statistical Process Control dengan R
+Version: 1.0.0
+Authors@R: person("Immantaka", "Juniarsa", email = "immantakajuniarsa30@gmail.com", role = c("aut", "cre"))
+Description: Tiga modul analisis statistika terapan (validitas-reliabilitas dan
+    regresi logistik ordinal untuk survei kepuasan, ANOVA faktorial dua arah,
+    serta peta kendali dan analisis kapabilitas proses) yang dapat direproduksi
+    sepenuhnya dengan satu perintah.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends:
+    R (>= 4.3.0)
+Imports:
+    dplyr (>= 1.1.4),
+    tidyr (>= 1.3.1),
+    ggplot2 (>= 3.4.4),
+    psych (>= 2.4.1),
+    GPArotation,
+    car (>= 3.1.2),
+    qcc (>= 2.7),
+    MASS,
+    rmarkdown (>= 2.25),
+    knitr (>= 1.45)
+Suggests:
+    testthat (>= 3.2.1),
+    renv
+Config/testthat/edition: 3

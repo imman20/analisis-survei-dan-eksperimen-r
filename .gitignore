@@ -1,0 +1,32 @@
+# --- R ---------------------------------------------------------------------
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+*.Rcheck/
+.Rapp.history
+
+# --- R Markdown / knitr -------------------------------------------------------
+*_cache/
+*_files/
+analysis/*.html
+analysis/*.md
+*.utf8.md
+*.knit.md
+
+# --- renv (pustaka lokal tidak di-commit; renv.lock di-commit) ---------------
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+
+# --- Sistem operasi / editor --------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
