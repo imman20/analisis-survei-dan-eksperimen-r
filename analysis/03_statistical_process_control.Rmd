@@ -1,0 +1,261 @@
+---
+title: "Modul 3 — Statistical Process Control (SPC) dan Analisis Kapabilitas"
+author: "Immantaka Juniarsa"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    code_folding: show
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+root <- if (file.exists("R/spc.R")) "." else ".."
+knitr::opts_knit$set(root.dir = normalizePath(root))
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 8, fig.height = 4.5, dpi = 110,
+                      dev.args = list(type = "cairo"))  # simbol non-ASCII aman di lokal C
+```
+
+```{r library}
+suppressPackageStartupMessages({ library(dplyr); library(tidyr); library(ggplot2); library(qcc) })
+source("R/plot_theme.R"); source("R/spc.R")
+pastikan_utf8()   # simbol ° dan × pada grafik tergambar benar di lokal apa pun
+ph1 <- read.csv("data/raw/spc_fase1.csv")
+ph2 <- read.csv("data/raw/spc_fase2.csv")
+att <- read.csv("data/raw/spc_atribut.csv")
+
+# Ubah ke matriks subgrup x pengukuran (format yang dipakai qcc dan fungsi spc.R)
+to_matrix <- function(df) {
+  as.matrix(df %>% pivot_wider(id_cols = subgroup, names_from = obs,
+                               values_from = diameter) %>% dplyr::select(-subgroup))
+}
+m1 <- to_matrix(ph1); m2 <- to_matrix(ph2)
+LSL <- 49.35; USL <- 50.65; TARGET <- 50.00   # spesifikasi diameter poros (mm)
+```
+
+## 1. Konteks
+
+Sebuah lini pemesinan memproduksi poros dengan spesifikasi diameter
+**`r TARGET` ± `r USL - TARGET` mm** (LSL = `r LSL`, USL = `r USL`). Setiap jam diambil
+**subgrup 5 unit**. Tahapan analisis mengikuti Montgomery (2013):
+
+1. **Fase I** (`r nrow(m1)` subgrup): bangun peta R dan X-bar, buang penyebab khusus, tetapkan batas kendali.
+2. **Kapabilitas**: Cp, Cpk (jangka pendek) dan Pp, Ppk (jangka panjang).
+3. **Peta p** untuk atribut cacat per lot.
+4. **Fase II** (`r nrow(m2)` subgrup): pantau proses dengan batas fase I dan aturan Western Electric.
+
+> Data disimulasikan (`simulate_spc()`, `set.seed(2024)`): fase I stabil (μ = 50,00; σ = 0,20),
+> fase II bergeser +0,15 mm (0,75σ) mulai subgrup ke-6, dan lot 18–19 pada data atribut
+> mengalami lonjakan cacat. Fungsi SPC di `R/spc.R` ditulis manual dan diverifikasi terhadap
+> paket `qcc` di dokumen ini.
+
+## 2. Fase I: peta R dan X-bar
+
+Peta R dibaca **lebih dahulu**: batas X-bar bergantung pada R-bar, sehingga variabilitas
+harus stabil sebelum rata-rata dinilai.
+
+```{r fase1-limit}
+lim <- xbar_r_limits(m1)
+k   <- spc_constants(lim$n)
+knitr::kable(k, caption = "Konstanta peta kendali untuk n = 5 (Montgomery, Appendix VI)")
+```
+
+```{r r-chart, fig.cap="Peta R fase I"}
+r_signal <- lim$r > lim$r_ucl | lim$r < lim$r_lcl
+p_r <- plot_control_chart(lim$r, lim$r_cl, lim$r_ucl, lim$r_lcl, r_signal,
+                          title = sprintf("Peta R fase I  (CL = %.3f, UCL = %.3f, LCL = %.3f)",
+                                          lim$r_cl, lim$r_ucl, lim$r_lcl),
+                          ylab = "Rentang subgrup (mm)")
+p_r
+```
+
+```{r xbar-chart, fig.cap="Peta X-bar fase I"}
+sigma_xbar <- lim$sigma_within / sqrt(lim$n)
+we1 <- western_electric(lim$xbar, lim$xbar_cl, sigma_xbar)
+p_x <- plot_control_chart(lim$xbar, lim$xbar_cl, lim$xbar_ucl, lim$xbar_lcl, we1$any_signal,
+                          title = sprintf("Peta X-bar fase I  (CL = %.3f, UCL = %.3f, LCL = %.3f)",
+                                          lim$xbar_cl, lim$xbar_ucl, lim$xbar_lcl),
+                          ylab = "Rata-rata subgrup (mm)")
+p_x
+simpan_grafik(p_x, "03_xbar_chart_fase1")
+```
+
+### 2.1 Aturan Western Electric pada fase I
+
+```{r we-fase1}
+we_summary <- we1 %>% summarise(`Aturan 1 (>3σ)` = sum(rule1), `Aturan 2 (2/3 >2σ)` = sum(rule2),
+                                `Aturan 3 (4/5 >1σ)` = sum(rule3), `Aturan 4 (8 sisi sama)` = sum(rule4))
+knitr::kable(we_summary, caption = "Jumlah subgrup fase I yang memicu tiap aturan")
+n_signal1 <- sum(we1$any_signal) + sum(r_signal)
+```
+
+**Kesimpulan fase I:** `r ifelse(n_signal1 == 0, "tidak ada sinyal pada peta R maupun X-bar; proses dinyatakan terkendali secara statistik dan batas kendali dapat dipakai untuk fase II.", paste(n_signal1, "subgrup memberi sinyal dan perlu diinvestigasi sebelum batas dipakai."))`
+
+### 2.2 Verifikasi terhadap paket `qcc`
+
+```{r verif-qcc}
+q_x <- qcc::qcc(m1, type = "xbar", plot = FALSE)
+q_r <- qcc::qcc(m1, type = "R",    plot = FALSE)
+verif <- data.frame(
+  statistik = c("X-bar CL", "X-bar UCL", "X-bar LCL", "R CL", "R UCL", "R LCL", "sigma within"),
+  manual = c(lim$xbar_cl, lim$xbar_ucl, lim$xbar_lcl, lim$r_cl, lim$r_ucl, lim$r_lcl, lim$sigma_within),
+  qcc    = c(q_x$center, q_x$limits[1, "UCL"], q_x$limits[1, "LCL"],
+             q_r$center, q_r$limits[1, "UCL"], q_r$limits[1, "LCL"], q_x$std.dev)
+) %>% mutate(selisih = manual - qcc)
+knitr::kable(verif %>% mutate(across(where(is.numeric), ~ round(.x, 5))),
+             caption = "Batas kendali manual (spc.R) vs qcc")
+```
+
+Selisih maksimum |manual − qcc| = `r signif(max(abs(verif$selisih)), 2)`; perbedaan kecil muncul
+karena `qcc` memakai konstanta d2 dengan presisi lebih tinggi daripada tabel 3–4 desimal,
+sedangkan batas X-bar dengan A2 identik hingga presisi tabel.
+
+## 3. Analisis kapabilitas proses
+
+```{r kapabilitas}
+cap <- capability_indices(as.vector(m1), LSL, USL, lim$sigma_within, target = TARGET)
+knitr::kable(cap %>% mutate(across(everything(), ~ signif(.x, 4))),
+             caption = "Indeks kapabilitas fase I")
+# process.capability() di qcc selalu menggambar; gambar dialihkan ke perangkat kosong
+grDevices::pdf(NULL)
+pc <- qcc::process.capability(q_x, spec.limits = c(LSL, USL), target = TARGET, print = FALSE)
+invisible(grDevices::dev.off())
+```
+
+| Indeks | Manual | qcc | Makna |
+|---|---|---|---|
+| Cp  | `r round(cap$Cp, 3)`  | `r round(pc$indices["Cp", 1], 3)`  | Potensi proses jika terpusat (σ within) |
+| Cpk | `r round(cap$Cpk, 3)` | `r round(pc$indices["Cp_k", 1], 3)` | Kapabilitas aktual, memperhitungkan posisi rata-rata |
+| Cpm | `r round(cap$Cpm, 3)` | `r round(pc$indices["Cpm", 1], 3)` | Penalti terhadap deviasi dari target |
+| Pp  | `r round(cap$Pp, 3)`  | — | Potensi jangka panjang (σ overall) |
+| Ppk | `r round(cap$Ppk, 3)` | — | Kinerja jangka panjang |
+
+Perkiraan unit di luar spesifikasi: **`r round(cap$ppm_expected, 0)` ppm**
+(`r round(cap$ppm_expected / 1e4, 3)` %). Rasio σ overall / σ within =
+`r round(cap$sigma_overall / cap$sigma_within, 3)` (≈ 1 → tidak ada variasi antar-subgrup berarti).
+
+```{r plot-kapabilitas, fig.cap="Histogram fase I dengan batas spesifikasi"}
+st <- pal_status()
+p_cap <- ggplot(data.frame(x = as.vector(m1)), aes(x)) +
+  geom_histogram(bins = 20, fill = pal_kategori()[1], colour = "#fcfcfb") +
+  geom_vline(xintercept = c(LSL, USL), colour = st["critical"], linewidth = 0.8) +
+  geom_vline(xintercept = TARGET, colour = st["neutral"], linetype = "dashed") +
+  annotate("text", x = c(LSL, USL), y = Inf, label = c("LSL", "USL"), vjust = 1.5,
+           hjust = c(1.2, -0.2), colour = st["critical"]) +
+  labs(title = sprintf("Kapabilitas proses: Cp = %.2f, Cpk = %.2f", cap$Cp, cap$Cpk),
+       x = "Diameter (mm)", y = "Frekuensi") +
+  theme_portofolio()
+p_cap
+simpan_grafik(p_cap, "03_kapabilitas_proses")
+```
+
+**Interpretasi:** Cpk `r ifelse(cap$Cpk >= 1.33, ">= 1,33 — proses kapabel menurut standar industri umum.", ifelse(cap$Cpk >= 1, "berada di antara 1,00 dan 1,33 — proses marginal: memenuhi spesifikasi tetapi tanpa margin aman; pengurangan variasi diperlukan untuk mencapai target 1,33.", "< 1,00 — proses tidak kapabel."))`
+Karena Cp ≈ Cpk, masalahnya bukan pemusatan melainkan **lebar variasi** relatif terhadap toleransi.
+
+## 4. Peta p untuk atribut cacat
+
+```{r p-chart, fig.cap="Peta p proporsi cacat per lot"}
+pl <- p_chart_limits(att$defectives, att$sample_size)
+p_p <- plot_control_chart(pl$p, pl$pbar, pl$ucl, pl$lcl, pl$out_of_control,
+                          title = sprintf("Peta p  (p-bar = %.4f, UCL = %.4f, LCL = %.4f)",
+                                          pl$pbar, pl$ucl[1], pl$lcl[1]),
+                          ylab = "Proporsi cacat") + labs(x = "Lot")
+p_p
+simpan_grafik(p_p, "03_p_chart")
+q_p <- qcc::qcc(att$defectives, sizes = att$sample_size, type = "p", plot = FALSE)
+lot_ooc <- att$lot[pl$out_of_control]
+```
+
+- p-bar manual = `r round(pl$pbar, 4)` vs qcc = `r round(q_p$center, 4)`; UCL manual =
+  `r round(pl$ucl[1], 4)` vs qcc = `r round(q_p$limits[1, "UCL"], 4)`.
+- Lot di luar batas kendali: `r if (length(lot_ooc)) paste(lot_ooc, collapse = ", ") else "tidak ada"`
+  (qcc menandai: `r if (length(q_p$violations$beyond.limits)) paste(q_p$violations$beyond.limits, collapse = ", ") else "tidak ada"`).
+
+```{r p-detail}
+knitr::kable(att %>% mutate(p = round(pl$p, 4), status = ifelse(pl$out_of_control, "DI LUAR KENDALI", "")) %>%
+               filter(pl$out_of_control | lot %in% c(17, 20)),
+             caption = "Lot yang memberi sinyal beserta lot tetangganya")
+```
+
+## 5. Fase II: pemantauan dan deteksi pergeseran
+
+Batas kendali **fase I dibekukan** dan diterapkan pada 15 subgrup baru. Pergeseran yang
+ditanam hanya 0,75σ — peta Shewhart klasik (aturan 1) lambat mendeteksinya, sehingga
+aturan Western Electric dan peta CUSUM dipakai sebagai pelengkap.
+
+```{r fase2}
+xbar2 <- rowMeans(m2); r2 <- apply(m2, 1, function(v) max(v) - min(v))
+we2 <- western_electric(xbar2, lim$xbar_cl, sigma_xbar)
+first_signal <- if (any(we2$any_signal)) min(which(we2$any_signal)) else NA
+rules_hit <- we2 %>% filter(any_signal) %>%
+  mutate(aturan = apply(dplyr::select(., rule1:rule4), 1,
+                        function(r) paste(which(r), collapse = ","))) %>%
+  dplyr::select(index, value, z, aturan)
+knitr::kable(rules_hit %>% mutate(across(c(value, z), ~ round(.x, 3))),
+             caption = "Subgrup fase II yang memicu aturan Western Electric")
+```
+
+```{r fase2-plot, fig.cap="Peta X-bar gabungan fase I dan II (batas dari fase I)"}
+all_xbar <- c(lim$xbar, xbar2)
+all_sig  <- c(we1$any_signal, we2$any_signal)
+p_x2 <- plot_control_chart(all_xbar, lim$xbar_cl, lim$xbar_ucl, lim$xbar_lcl, all_sig,
+                           title = "Peta X-bar: fase I (kiri) dan fase II (kanan garis putus)",
+                           ylab = "Rata-rata subgrup (mm)", phase_break = nrow(m1)) +
+  # Label fase diletakkan di dekat LCL (area kosong) agar tidak menutupi titik data
+  annotate("text", x = nrow(m1) + 1, y = lim$xbar_lcl, label = "Fase II",
+           hjust = 0, vjust = -0.6, colour = "#52514e") +
+  annotate("text", x = nrow(m1), y = lim$xbar_lcl, label = "Fase I",
+           hjust = 1, vjust = -0.6, colour = "#52514e")
+p_x2
+simpan_grafik(p_x2, "03_xbar_chart_fase2")
+```
+
+### 5.1 CUSUM sebagai detektor pergeseran kecil
+
+CUSUM mengakumulasi deviasi dari target sehingga lebih peka terhadap pergeseran 0,5–1,5σ.
+Parameter standar: k = 0,5σ, h = 5σ (dalam satuan σ rata-rata subgrup).
+
+```{r cusum, fig.cap="Peta CUSUM fase II (qcc)"}
+cs <- qcc::cusum(m2, center = lim$xbar_cl, std.dev = lim$sigma_within,
+                 decision.interval = 5, se.shift = 1, plot = TRUE,
+                 title = "CUSUM fase II (batas keputusan h = 5)")
+cusum_first <- if (length(cs$violations$upper)) min(cs$violations$upper) else NA
+```
+
+| Metode | Subgrup fase II pertama yang memberi sinyal |
+|---|---|
+| Shewhart aturan 1 saja (> 3σ) | `r if (any(we2$rule1)) min(which(we2$rule1)) else "tidak terdeteksi dalam 15 subgrup"` |
+| Western Electric (aturan 1–4) | `r if (is.na(first_signal)) "tidak terdeteksi" else first_signal` |
+| CUSUM (k = 0,5; h = 5) | `r if (is.na(cusum_first)) "tidak terdeteksi" else cusum_first` |
+
+Pergeseran sebenarnya dimulai pada subgrup ke-6 fase II. Rata-rata subgrup 6–15 =
+`r round(mean(xbar2[6:15]), 3)` mm vs garis tengah `r round(lim$xbar_cl, 3)` mm
+(selisih `r round(mean(xbar2[6:15]) - lim$xbar_cl, 3)` mm ≈
+`r round((mean(xbar2[6:15]) - lim$xbar_cl) / lim$sigma_within, 2)`σ).
+
+## 6. Rekomendasi QC
+
+```{r rek, echo=FALSE}
+detek <- if (is.na(first_signal)) "belum" else sprintf("pada subgrup ke-%d (%d subgrup setelah pergeseran dimulai)", first_signal, first_signal - 6)
+```
+
+1. **Proses fase I stabil** dan batas kendali (X-bar: `r round(lim$xbar_lcl, 3)`–`r round(lim$xbar_ucl, 3)` mm;
+   R: 0–`r round(lim$r_ucl, 3)` mm) layak dijadikan standar pemantauan.
+2. **Kapabilitas marginal** (Cpk = `r round(cap$Cpk, 2)`, ≈ `r round(cap$ppm_expected)` ppm). Target Cpk ≥ 1,33 menuntut
+   σ within turun dari `r round(lim$sigma_within, 3)` ke ≤ `r round((USL - LSL) / (6 * 1.33), 3)` mm —
+   prioritaskan pengurangan variasi (kalibrasi alat, keausan pahat, bahan baku), bukan penyetelan pusat.
+3. **Pergeseran kecil +0,75σ** pada fase II terdeteksi aturan Western Electric `r detek`; peta Shewhart
+   aturan 1 saja `r if (any(we2$rule1)) "juga mendeteksinya" else "tidak mendeteksinya"`. Terapkan aturan
+   Western Electric atau CUSUM pada *dashboard* lini secara rutin.
+4. **Lot `r paste(lot_ooc, collapse = " dan ")`** pada peta p harus diinvestigasi (penyebab khusus: pergantian
+   shift, batch bahan, atau mesin); bila penyebab ditemukan, hitung ulang batas tanpa lot tersebut.
+5. Dokumentasikan rencana reaksi (OCAP) untuk setiap jenis sinyal agar operator tahu tindakan yang harus diambil.
+
+### Padanan di Minitab / SPSS
+Minitab: *Stat › Control Charts › Variables Charts for Subgroups › Xbar-R*, *Stat › Quality Tools ›
+Capability Analysis › Normal*, *Stat › Control Charts › Attributes Charts › P*, *Time-Weighted Charts
+› CUSUM*. SPSS: *Analyze › Quality Control › Control Charts*. Rincian di `docs/padanan_spss_minitab.md`.

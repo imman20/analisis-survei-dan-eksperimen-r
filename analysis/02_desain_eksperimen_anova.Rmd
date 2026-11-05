@@ -1,0 +1,270 @@
+---
+title: "Modul 2 — Desain Eksperimen Faktorial dan ANOVA Dua Arah"
+author: "Immantaka Juniarsa"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    code_folding: show
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+root <- if (file.exists("R/plot_theme.R")) "." else ".."
+knitr::opts_knit$set(root.dir = normalizePath(root))
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 8, fig.height = 5, dpi = 110,
+                      dev.args = list(type = "cairo"))  # simbol non-ASCII aman di lokal C
+```
+
+```{r library}
+suppressPackageStartupMessages({ library(dplyr); library(tidyr); library(ggplot2); library(car) })
+source("R/plot_theme.R")
+pastikan_utf8()   # simbol ° dan × pada grafik tergambar benar di lokal apa pun
+exp_df <- read.csv("data/raw/eksperimen_faktorial.csv") %>%
+  mutate(temperature = factor(temperature, levels = c(150, 175, 200),
+                              labels = c("150°C", "175°C", "200°C")),
+         material    = factor(material, levels = c("A", "B"),
+                              labels = c("Bahan A", "Bahan B")))
+```
+
+## 1. Latar belakang dan rancangan
+
+Sebuah proses perlakuan panas ingin diketahui pengaruh **suhu** (150, 175, 200 °C) dan
+**jenis bahan** (A, B) terhadap **kekuatan tarik** (MPa). Rancangan: **faktorial penuh
+3 × 2 dengan 5 replikasi** (30 run), urutan run diacak sepenuhnya (*completely
+randomized design*). Pertanyaan:
+
+1. Apakah suhu dan bahan berpengaruh pada kekuatan tarik?
+2. Apakah efek suhu **bergantung** pada jenis bahan (interaksi)?
+3. Kombinasi mana yang memberi kekuatan tertinggi, dan seberapa besar efeknya secara praktis?
+
+> Data disimulasikan (`simulate_experiment()`, `set.seed(2024)`) dengan interaksi yang
+> sengaja ditanam: keunggulan Bahan B mengecil pada suhu tinggi.
+
+### 1.1 Tabel rancangan
+
+```{r desain}
+knitr::kable(exp_df %>% count(temperature, material) %>%
+               pivot_wider(names_from = material, values_from = n),
+             caption = "Jumlah replikasi per sel (rancangan seimbang)")
+knitr::kable(head(exp_df, 10), caption = "Sepuluh run pertama sesuai urutan acak")
+```
+
+## 2. Eksplorasi data
+
+```{r deskriptif}
+cell_stats <- exp_df %>% group_by(temperature, material) %>%
+  summarise(n = n(), mean = mean(tensile_strength), sd = sd(tensile_strength),
+            min = min(tensile_strength), max = max(tensile_strength), .groups = "drop") %>%
+  mutate(across(c(mean, sd), ~ round(.x, 2)))
+knitr::kable(cell_stats, caption = "Statistik deskriptif per sel")
+```
+
+```{r boxplot, fig.cap="Sebaran kekuatan tarik per kombinasi perlakuan"}
+pal2 <- pal_kategori()[1:2]
+p_box <- ggplot(exp_df, aes(temperature, tensile_strength, fill = material)) +
+  geom_boxplot(alpha = 0.85, width = 0.6, position = position_dodge(0.7),
+               outlier.shape = 21, colour = "#52514e") +
+  scale_fill_manual(values = pal2, name = NULL) +
+  labs(title = "Kekuatan tarik menurut suhu dan bahan", x = "Suhu", y = "Kekuatan tarik (MPa)") +
+  theme_portofolio()
+p_box
+simpan_grafik(p_box, "02_boxplot_perlakuan")
+```
+
+```{r interaction, fig.cap="Interaction plot: rata-rata sel"}
+p_int <- ggplot(cell_stats, aes(temperature, mean, colour = material, group = material)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean - sd / sqrt(n), ymax = mean + sd / sqrt(n)), width = 0.12) +
+  scale_colour_manual(values = pal2, name = NULL) +
+  labs(title = "Interaction plot suhu × bahan",
+       subtitle = "Titik = rata-rata sel, batang = ± galat baku; garis tidak sejajar menandakan interaksi",
+       x = "Suhu", y = "Rata-rata kekuatan tarik (MPa)") +
+  theme_portofolio()
+p_int
+simpan_grafik(p_int, "02_interaction_plot")
+```
+
+Garis Bahan A dan B **tidak sejajar**: selisih A–B besar pada 150 °C dan hampir hilang pada
+200 °C. Ini indikasi visual interaksi yang akan diuji secara formal.
+
+## 3. ANOVA dua arah dengan interaksi
+
+Model: $y_{ijk} = \mu + \tau_i + \beta_j + (\tau\beta)_{ij} + \varepsilon_{ijk}$, dengan
+$\varepsilon \sim N(0, \sigma^2)$. Karena rancangan seimbang, jumlah kuadrat Tipe I, II,
+dan III identik; ditampilkan Tipe II dari `car::Anova` sebagai pembanding `anova()` bawaan.
+
+```{r anova}
+fit <- lm(tensile_strength ~ temperature * material, data = exp_df)
+anova_tbl <- anova(fit)
+knitr::kable(round(anova_tbl, 4), caption = "Tabel ANOVA (jumlah kuadrat sekuensial / Tipe I)")
+anova2 <- car::Anova(fit, type = 2)
+stopifnot(all(abs(anova2$`Sum Sq` - anova_tbl$`Sum Sq`) < 1e-8))  # identik pada desain seimbang
+p_temp <- anova_tbl["temperature", "Pr(>F)"]
+p_mat  <- anova_tbl["material", "Pr(>F)"]
+p_int  <- anova_tbl["temperature:material", "Pr(>F)"]
+fmt_p  <- function(p) ifelse(p < 0.001, "< 0,001", paste("=", signif(p, 3)))
+```
+
+| Sumber | F | p-value | Keputusan (α = 5%) |
+|---|---|---|---|
+| Suhu | `r round(anova_tbl["temperature","F value"], 2)` | `r fmt_p(p_temp)` | `r ifelse(p_temp < 0.05, "Signifikan", "Tidak signifikan")` |
+| Bahan | `r round(anova_tbl["material","F value"], 2)` | `r fmt_p(p_mat)` | `r ifelse(p_mat < 0.05, "Signifikan", "Tidak signifikan")` |
+| Suhu × Bahan | `r round(anova_tbl["temperature:material","F value"], 2)` | `r fmt_p(p_int)` | `r ifelse(p_int < 0.05, "Signifikan", "Tidak signifikan")` |
+
+R² model = `r round(summary(fit)$r.squared, 3)`; R² terkoreksi = `r round(summary(fit)$adj.r.squared, 3)`.
+
+### 3.1 Ukuran efek (eta-squared parsial)
+
+$\eta^2_p = SS_{efek} / (SS_{efek} + SS_{galat})$. Acuan Cohen: 0,01 kecil, 0,06 sedang, 0,14 besar.
+
+```{r eta}
+ss_err <- anova_tbl["Residuals", "Sum Sq"]
+eta_tbl <- data.frame(
+  efek = rownames(anova_tbl)[1:3],
+  SS   = anova_tbl$`Sum Sq`[1:3]
+) %>% mutate(eta_sq_partial = SS / (SS + ss_err),
+             eta_sq         = SS / sum(anova_tbl$`Sum Sq`),
+             kategori = cut(eta_sq_partial, c(-Inf, 0.01, 0.06, 0.14, Inf),
+                            labels = c("Dapat diabaikan", "Kecil", "Sedang", "Besar")))
+knitr::kable(eta_tbl %>% mutate(across(where(is.numeric), ~ round(.x, 3))),
+             caption = "Eta-squared parsial dan eta-squared klasik")
+```
+
+## 4. Pemeriksaan asumsi
+
+```{r asumsi}
+res <- residuals(fit)
+sw  <- shapiro.test(res)
+lev <- car::leveneTest(tensile_strength ~ temperature * material, data = exp_df)
+```
+
+| Asumsi | Uji | Statistik | p-value | Kesimpulan |
+|---|---|---|---|---|
+| Normalitas residual | Shapiro-Wilk | W = `r round(sw$statistic, 4)` | `r fmt_p(sw$p.value)` | `r ifelse(sw$p.value > 0.05, "Normalitas tidak ditolak", "Normalitas ditolak")` |
+| Homogenitas varians | Levene (median) | F = `r round(lev[1, "F value"], 3)` | `r fmt_p(lev[1, "Pr(>F)"])` | `r ifelse(lev[1, "Pr(>F)"] > 0.05, "Varians homogen", "Varians tidak homogen")` |
+
+```{r plot-asumsi, fig.cap="Diagnostik residual", fig.height=4}
+diag_df <- data.frame(fitted = fitted(fit), res = res, run = exp_df$run_order)
+p1 <- ggplot(diag_df, aes(fitted, res)) +
+  geom_hline(yintercept = 0, colour = "#52514e", linetype = "dashed") +
+  geom_point(colour = pal_kategori()[1], size = 2.4) +
+  labs(title = "Residual vs fitted", x = "Nilai dugaan", y = "Residual") + theme_portofolio()
+p2 <- ggplot(diag_df, aes(sample = res)) +
+  stat_qq(colour = pal_kategori()[1], size = 2.2) + stat_qq_line(colour = "#52514e") +
+  labs(title = "Normal Q-Q residual", x = "Kuantil teoretis", y = "Kuantil sampel") + theme_portofolio()
+p3 <- ggplot(diag_df, aes(run, res)) +
+  geom_hline(yintercept = 0, colour = "#52514e", linetype = "dashed") +
+  geom_line(colour = "#c3c2b7") + geom_point(colour = pal_kategori()[1], size = 2.2) +
+  labs(title = "Residual vs urutan run", x = "Urutan run", y = "Residual") + theme_portofolio()
+grid::grid.newpage()
+grid::pushViewport(grid::viewport(layout = grid::grid.layout(1, 3)))
+print(p1, vp = grid::viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(p2, vp = grid::viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(p3, vp = grid::viewport(layout.pos.row = 1, layout.pos.col = 3))
+```
+
+Tidak terlihat pola corong (varians konstan) maupun tren terhadap urutan run (independensi
+terjaga berkat pengacakan).
+
+## 5. Uji lanjut Tukey HSD
+
+Karena interaksi `r ifelse(p_int < 0.05, "signifikan, perbandingan dilakukan pada level kombinasi (sel), bukan hanya efek utama.", "tidak signifikan, perbandingan cukup pada efek utama.")`
+
+```{r tukey}
+aov_fit <- aov(tensile_strength ~ temperature * material, data = exp_df)
+tk_temp <- TukeyHSD(aov_fit, "temperature")
+tk_int  <- TukeyHSD(aov_fit, "temperature:material")
+knitr::kable(round(tk_temp$temperature, 3), caption = "Tukey HSD efek utama suhu")
+tk_int_df <- as.data.frame(tk_int$`temperature:material`) %>%
+  mutate(perbandingan = rownames(.), .before = 1) %>%
+  arrange(`p adj`) %>% mutate(across(where(is.numeric), ~ round(.x, 3)))
+knitr::kable(tk_int_df, caption = "Tukey HSD semua pasangan sel (diurutkan menurut p terkoreksi)")
+```
+
+```{r plot-tukey, fig.cap="Interval kepercayaan Tukey 95% untuk pasangan sel", fig.height=6}
+ggplot(tk_int_df, aes(x = diff, y = reorder(perbandingan, diff))) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "#52514e") +
+  geom_errorbarh(aes(xmin = lwr, xmax = upr,
+                     colour = `p adj` < 0.05), height = 0.25) +
+  geom_point(aes(colour = `p adj` < 0.05), size = 2.4) +
+  scale_colour_manual(values = c(`FALSE` = "#52514e", `TRUE` = pal_kategori()[1]),
+                      labels = c("Tidak signifikan", "Signifikan (p < 0,05)"), name = NULL) +
+  labs(title = "Selisih rata-rata antar sel (Tukey HSD)", x = "Selisih (MPa)", y = NULL) +
+  theme_portofolio()
+```
+
+### 5.1 Perbandingan Bahan A vs B pada tiap suhu (slicing interaksi)
+
+```{r slice}
+slice_tbl <- tk_int_df %>%
+  filter(grepl("^(150°C|175°C|200°C):Bahan B-\\1:Bahan A$", perbandingan)) %>%
+  mutate(suhu = sub(":.*", "", perbandingan)) %>%
+  dplyr::select(suhu, diff, lwr, upr, `p adj`)
+knitr::kable(slice_tbl, caption = "Selisih Bahan B − Bahan A pada tiap suhu")
+```
+
+## 6. Pembanding non-parametrik: Kruskal-Wallis
+
+Bila asumsi normalitas diragukan (misal ukuran sampel kecil atau ada pencilan), uji
+Kruskal-Wallis dapat dipakai untuk efek suhu dan Mann-Whitney (Wilcoxon rank-sum) untuk bahan.
+Perhatikan bahwa uji ini tidak memodelkan interaksi.
+
+```{r nonpar}
+kw <- kruskal.test(tensile_strength ~ temperature, data = exp_df)
+mw <- wilcox.test(tensile_strength ~ material, data = exp_df, exact = FALSE)
+```
+
+| Uji | Statistik | p-value | Padanan parametrik |
+|---|---|---|---|
+| Kruskal-Wallis (suhu) | H = `r round(kw$statistic, 3)`, df = `r kw$parameter` | `r fmt_p(kw$p.value)` | ANOVA efek suhu, p `r fmt_p(p_temp)` |
+| Wilcoxon rank-sum (bahan) | W = `r mw$statistic` | `r fmt_p(mw$p.value)` | ANOVA efek bahan, p `r fmt_p(p_mat)` |
+
+```{r nonpar-teks, echo=FALSE, results="asis"}
+konsisten_suhu  <- (kw$p.value < 0.05) == (p_temp < 0.05)
+konsisten_bahan <- (mw$p.value < 0.05) == (p_mat < 0.05)
+if (konsisten_suhu && konsisten_bahan) {
+  cat("Kesimpulan uji non-parametrik konsisten dengan ANOVA untuk kedua faktor.\n")
+} else {
+  cat(sprintf(paste(
+    "Untuk **suhu**, kesimpulan %s. Untuk **bahan**, uji Wilcoxon %s sedangkan ANOVA signifikan.",
+    "Perbedaan ini wajar: Wilcoxon membandingkan dua kelompok bahan dengan mengabaikan suhu,",
+    "sehingga variasi akibat suhu dan interaksi masuk ke dalam 'galat' dan menurunkan daya uji.",
+    "ANOVA faktorial memisahkan sumber variasi tersebut, sehingga lebih peka. Ini contoh nyata",
+    "mengapa rancangan faktorial lebih efisien daripada membandingkan satu faktor pada satu waktu.\n"),
+    ifelse(konsisten_suhu, "konsisten", "berbeda"),
+    ifelse(mw$p.value < 0.05, "signifikan", "tidak signifikan")))
+}
+```
+
+## 7. Kesimpulan praktis
+
+```{r best, echo=FALSE}
+best <- cell_stats %>% arrange(desc(mean)) %>% slice(1)
+worst <- cell_stats %>% arrange(mean) %>% slice(1)
+```
+
+1. **Suhu dan bahan keduanya berpengaruh** (p `r fmt_p(p_temp)` dan p `r fmt_p(p_mat)`), dengan
+   ukuran efek `r tolower(eta_tbl$kategori[1])` (η²p = `r round(eta_tbl$eta_sq_partial[1], 2)`) untuk suhu
+   dan `r tolower(eta_tbl$kategori[2])` (η²p = `r round(eta_tbl$eta_sq_partial[2], 2)`) untuk bahan.
+2. **Interaksi signifikan** (p `r fmt_p(p_int)`, η²p = `r round(eta_tbl$eta_sq_partial[3], 2)`): keunggulan
+   Bahan B sebesar `r slice_tbl$diff[slice_tbl$suhu == "150°C"]` MPa pada 150 °C menyusut menjadi
+   `r slice_tbl$diff[slice_tbl$suhu == "200°C"]` MPa pada 200 °C (tidak signifikan). Artinya,
+   rekomendasi bahan **tidak boleh dibuat tanpa menyebut suhu**.
+3. **Kombinasi terbaik**: `r best$temperature` + `r best$material` (rata-rata
+   `r best$mean` MPa) versus terlemah `r worst$temperature` + `r worst$material` (`r worst$mean` MPa).
+4. **Implikasi biaya**: jika Bahan B lebih mahal, proses pada 200 °C dengan Bahan A memberi kekuatan
+   yang secara statistik setara dengan Bahan B — peluang penghematan tanpa mengorbankan mutu.
+5. **Langkah lanjut**: rancangan *response surface* di sekitar 175–200 °C untuk mencari suhu optimum,
+   dan replikasi lebih banyak untuk mempersempit interval kepercayaan.
+
+### Padanan di SPSS / Minitab
+SPSS: *Analyze › General Linear Model › Univariate* (Model: full factorial, Post Hoc: Tukey,
+Options: homogeneity tests, estimates of effect size). Minitab: *Stat › ANOVA › General Linear
+Model › Fit General Linear Model* lalu *Comparisons* (Tukey) dan *Factorial Plots*. Rincian di
+`docs/padanan_spss_minitab.md`.

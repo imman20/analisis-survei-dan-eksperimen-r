@@ -1,0 +1,312 @@
+---
+title: "Modul 1 — Analisis Survei Kepuasan Pelanggan (SERVQUAL)"
+author: "Immantaka Juniarsa"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    code_folding: show
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+# Mengapa: Rmd bisa di-render dari root repo (run_all.R) maupun dari folder
+# analysis/ (tombol Knit di RStudio). Blok ini menyamakan direktori kerja.
+root <- if (file.exists("R/survey_utils.R")) "." else ".."
+knitr::opts_knit$set(root.dir = normalizePath(root))
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 8, fig.height = 5, dpi = 110,
+                      dev.args = list(type = "cairo"))  # simbol non-ASCII aman di lokal C
+```
+
+```{r library}
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(ggplot2); library(psych); library(MASS)
+})
+# dplyr::select tertutup oleh MASS::select, jadi dipanggil eksplisit di bawah
+source("R/plot_theme.R"); source("R/survey_utils.R")
+pastikan_utf8()   # simbol ° dan × pada grafik tergambar benar di lokal apa pun
+survey <- read.csv("data/raw/survey_kepuasan.csv", stringsAsFactors = FALSE)
+items  <- grep("^(tan|rel|res|ass|emp)_[0-9]$", names(survey), value = TRUE)
+```
+
+## 1. Tujuan dan pertanyaan analisis
+
+Survei ini mengukur kualitas layanan dengan lima dimensi **SERVQUAL**
+(Parasuraman, Zeithaml & Berry): *Tangibles, Reliability, Responsiveness,
+Assurance, Empathy*, masing-masing 4 item skala Likert 1–5, pada
+`r nrow(survey)` responden. Pertanyaan yang dijawab:
+
+1. Apakah instrumen **valid dan reliabel**? (korelasi item-total, Cronbach's alpha)
+2. Apakah struktur 5 dimensi **didukung data**? (KMO, Bartlett, analisis faktor eksploratori)
+3. Dimensi mana yang **paling menentukan kepuasan keseluruhan**? (regresi logistik ordinal)
+
+> Data merupakan **simulasi** (`R/simulate_data.R`, `set.seed(2024)`); struktur 5 faktor
+> dan satu item lemah (`emp_4`) sengaja ditanam untuk menguji apakah prosedur mampu
+> menemukannya.
+
+## 2. Statistik deskriptif
+
+### 2.1 Profil responden
+
+```{r demografi}
+demo_tbl <- bind_rows(
+  survey %>% count(Kategori = gender,     name = "n") %>% mutate(Variabel = "Jenis kelamin"),
+  survey %>% count(Kategori = age_group,  name = "n") %>% mutate(Variabel = "Kelompok usia"),
+  survey %>% count(Kategori = usage_freq, name = "n") %>% mutate(Variabel = "Frekuensi penggunaan")
+) %>% mutate(Persen = round(100 * n / nrow(survey), 1)) %>%
+  dplyr::select(Variabel, Kategori, n, Persen)
+knitr::kable(demo_tbl, caption = "Profil responden")
+```
+
+### 2.2 Deskriptif item
+
+```{r deskriptif-item}
+item_desc <- survey %>%
+  pivot_longer(all_of(items), names_to = "item", values_to = "skor") %>%
+  group_by(dimensi = map_dimension(item), item) %>%
+  summarise(mean = mean(skor), sd = sd(skor), median = median(skor),
+            pct_puas = mean(skor >= 4) * 100, .groups = "drop") %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2)))
+knitr::kable(item_desc, caption = "Rata-rata, simpangan baku, dan persentase skor >= 4 per item")
+```
+
+```{r plot-dimensi, fig.cap="Rata-rata skor per dimensi SERVQUAL"}
+dim_mean <- item_desc %>% group_by(dimensi) %>%
+  summarise(mean = mean(mean), .groups = "drop") %>% arrange(mean)
+p_dim <- ggplot(dim_mean, aes(x = mean, y = reorder(dimensi, mean))) +
+  geom_col(fill = pal_kategori()[1], width = 0.6) +
+  geom_text(aes(label = sprintf("%.2f", mean)), hjust = -0.15, colour = "#52514e") +
+  scale_x_continuous(limits = c(0, 5), expand = c(0, 0)) +
+  labs(title = "Rata-rata skor per dimensi (skala 1-5)", x = "Rata-rata", y = NULL) +
+  theme_portofolio()
+p_dim
+```
+
+```{r plot-overall, fig.cap="Distribusi kepuasan keseluruhan"}
+overall_tbl <- survey %>% count(overall_satisfaction) %>%
+  mutate(pct = 100 * n / sum(n))
+ggplot(overall_tbl, aes(factor(overall_satisfaction), n)) +
+  geom_col(fill = pal_kategori()[1], width = 0.6) +
+  geom_text(aes(label = sprintf("%d (%.0f%%)", n, pct)), vjust = -0.4, colour = "#52514e") +
+  labs(title = "Kepuasan keseluruhan (1 = sangat tidak puas, 5 = sangat puas)",
+       x = "Skor", y = "Jumlah responden") +
+  theme_portofolio()
+```
+
+## 3. Uji validitas item (korelasi item-total terkoreksi)
+
+Setiap item dikorelasikan dengan **jumlah item lain pada dimensinya**. Kriteria:
+r ≥ 0,30 dianggap valid (Nunnally & Bernstein). Sebagai pembanding, r-tabel untuk
+n = `r nrow(survey)` pada α = 5% adalah `r round(qt(0.975, nrow(survey)-2)/sqrt(qt(0.975, nrow(survey)-2)^2 + nrow(survey)-2), 3)`.
+
+```{r validitas}
+validity <- bind_rows(lapply(unique(map_dimension(items)), function(d) {
+  cols <- items[map_dimension(items) == d]
+  item_total_correlation(survey[, cols]) %>% mutate(dimensi = d, .before = 1)
+}))
+validity_fmt <- validity %>%
+  mutate(r_item_total = round(r_item_total, 3),
+         alpha_if_deleted = round(alpha_if_deleted, 3),
+         keterangan = ifelse(valid, "Valid", "Tidak valid (r < 0,30)"))
+knitr::kable(validity_fmt %>% dplyr::select(-valid),
+             caption = "Korelasi item-total terkoreksi dan alpha jika item dihapus")
+item_lemah <- validity$item[!validity$valid]
+item_lemah_txt <- if (length(item_lemah)) paste(item_lemah, collapse = ", ") else "tidak ada"
+```
+
+**Temuan:** `r length(item_lemah)` item tidak memenuhi ambang, yaitu **`r item_lemah_txt`**.
+Item ini memang disimulasikan dengan loading rendah (0,35), sehingga prosedur
+berhasil mendeteksinya.
+
+## 4. Uji reliabilitas (Cronbach's alpha)
+
+Alpha dihitung dua cara: rumus manual (`cronbach_alpha()`, diuji di `tests/`) dan
+`psych::alpha()` sebagai verifikasi silang.
+
+```{r reliabilitas}
+alpha_tbl <- bind_rows(lapply(unique(map_dimension(items)), function(d) {
+  cols <- items[map_dimension(items) == d]
+  data.frame(
+    dimensi      = d,
+    n_item       = length(cols),
+    alpha_manual = cronbach_alpha(survey[, cols]),
+    alpha_psych  = psych::alpha(survey[, cols])$total$raw_alpha
+  )
+})) %>% mutate(interpretasi = as.character(interpret_alpha(alpha_manual)))
+knitr::kable(alpha_tbl %>% mutate(across(starts_with("alpha"), ~ round(.x, 3))),
+             caption = "Cronbach's alpha per dimensi (manual vs psych)")
+stopifnot(all(abs(alpha_tbl$alpha_manual - alpha_tbl$alpha_psych) < 1e-8))
+
+# Alpha seluruh instrumen (20 item) sebagai informasi tambahan
+alpha_total <- cronbach_alpha(survey[, items])
+```
+
+Alpha keseluruhan 20 item = **`r round(alpha_total, 3)`**. Alpha Empathy bila `emp_4`
+dihapus = **`r round(validity$alpha_if_deleted[validity$item == "emp_4"], 3)`**
+(vs `r round(alpha_tbl$alpha_manual[alpha_tbl$dimensi == "Empathy"], 3)` dengan item tersebut).
+
+```{r plot-alpha, fig.cap="Cronbach's alpha per dimensi"}
+p_alpha <- ggplot(alpha_tbl, aes(x = alpha_manual, y = reorder(dimensi, alpha_manual))) +
+  geom_col(fill = pal_kategori()[1], width = 0.6) +
+  geom_vline(xintercept = 0.7, linetype = "dashed", colour = pal_status()["critical"]) +
+  geom_text(aes(label = sprintf("%.3f", alpha_manual)), hjust = -0.15, colour = "#52514e") +
+  annotate("text", x = 0.7, y = 0.55, label = "ambang 0,70", hjust = -0.05,
+           colour = pal_status()["critical"], size = 3.3) +
+  scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  labs(title = "Reliabilitas per dimensi (Cronbach's alpha)", x = "Alpha", y = NULL) +
+  theme_portofolio()
+p_alpha
+simpan_grafik(p_alpha, "01_alpha_per_dimensi")
+```
+
+## 5. Kelayakan analisis faktor: KMO dan Bartlett
+
+```{r kmo-bartlett}
+R <- cor(survey[, items])
+kmo      <- psych::KMO(R)
+bartlett <- psych::cortest.bartlett(R, n = nrow(survey))
+kmo_low  <- names(kmo$MSAi)[kmo$MSAi < 0.5]
+```
+
+| Uji | Statistik | Keputusan |
+|---|---|---|
+| KMO (overall MSA) | `r round(kmo$MSA, 3)` | `r ifelse(kmo$MSA >= 0.8, "Sangat layak (>= 0,80)", ifelse(kmo$MSA >= 0.6, "Layak (>= 0,60)", "Kurang layak"))` |
+| Bartlett's test of sphericity | χ² = `r round(bartlett$chisq, 1)`, df = `r bartlett$df`, p `r ifelse(bartlett$p.value < 0.001, "< 0,001", paste("=", signif(bartlett$p.value, 3)))` | Matriks korelasi bukan identitas → analisis faktor layak |
+
+Item dengan MSA individual < 0,5: `r if (length(kmo_low)) paste(kmo_low, collapse = ", ") else "tidak ada"`.
+
+## 6. Analisis faktor eksploratori (EFA)
+
+### 6.1 Jumlah faktor
+
+```{r parallel, fig.cap="Parallel analysis untuk menentukan jumlah faktor"}
+pa <- psych::fa.parallel(survey[, items], fm = "minres", fa = "fa",
+                         n.iter = 50, plot = TRUE, main = "Parallel analysis")
+```
+
+Parallel analysis menyarankan **`r pa$nfact` faktor**, sejalan dengan teori SERVQUAL.
+
+### 6.2 Ekstraksi dan rotasi
+
+Metode ekstraksi *minimum residual* (minres) dengan rotasi oblik **oblimin**, karena
+dimensi layanan diharapkan saling berkorelasi.
+
+```{r efa}
+efa <- psych::fa(survey[, items], nfactors = 5, rotate = "oblimin", fm = "minres")
+load_tbl <- as.data.frame(unclass(efa$loadings)) %>%
+  mutate(item = rownames(.), dimensi_teori = map_dimension(item), .before = 1)
+load_fmt <- load_tbl %>%
+  mutate(across(where(is.numeric), ~ ifelse(abs(.x) < 0.30, "", sprintf("%.2f", .x))))
+knitr::kable(load_fmt, caption = "Loading faktor setelah rotasi oblimin (|loading| < 0,30 disembunyikan)")
+cat(sprintf("Varians yang dijelaskan 5 faktor: %.1f%%\nRMSR = %.3f, TLI = %.3f, RMSEA = %.3f\n",
+            100 * sum(efa$Vaccounted["Proportion Var", ]), efa$rms, efa$TLI, efa$RMSEA[1]))
+# Cek: apakah faktor dominan tiap item sesuai dimensi teoretis?
+dominant <- apply(abs(efa$loadings), 1, which.max)
+cross <- table(teori = load_tbl$dimensi_teori, faktor = colnames(efa$loadings)[dominant])
+cross
+kesesuaian <- mean(apply(cross, 1, max)) / 4 * 100
+```
+
+**Temuan:** `r round(kesesuaian, 0)`% item memuat paling kuat pada faktor yang sama dengan
+dimensi teoretisnya; item `emp_4` memuat lemah di semua faktor, konsisten dengan hasil uji validitas.
+Korelasi antar faktor berkisar `r round(min(efa$Phi[upper.tri(efa$Phi)]), 2)`–`r round(max(efa$Phi[upper.tri(efa$Phi)]), 2)`, membenarkan pilihan rotasi oblik.
+
+## 7. Regresi logistik ordinal: faktor penentu kepuasan keseluruhan
+
+Variabel respons `overall_satisfaction` (1–5, ordinal) dimodelkan dengan
+*proportional odds model* (`MASS::polr`) terhadap skor rata-rata lima dimensi
+(item `emp_4` dikeluarkan karena tidak valid).
+
+```{r polr}
+items_valid <- setdiff(items, item_lemah)
+scores <- dimension_scores(survey, items_valid)
+model_df <- cbind(scores, overall = factor(survey$overall_satisfaction, ordered = TRUE))
+fit <- MASS::polr(overall ~ Tangibles + Reliability + Responsiveness + Assurance + Empathy,
+                  data = model_df, Hess = TRUE, method = "logistic")
+fit_null <- MASS::polr(overall ~ 1, data = model_df, Hess = TRUE)
+or_tbl <- odds_ratio_table(fit)
+knitr::kable(or_tbl %>% mutate(across(where(is.numeric), ~ round(.x, 3))),
+             caption = "Koefisien, odds ratio, dan IK 95%")
+lr <- anova(fit_null, fit)
+mcfadden <- 1 - as.numeric(logLik(fit)) / as.numeric(logLik(fit_null))
+```
+
+- Uji rasio kemungkinan model vs model nol: χ² = `r round(lr$"LR stat."[2], 1)`,
+  df = `r lr$"   Df"[2]`, p `r ifelse(lr$"Pr(Chi)"[2] < 0.001, "< 0,001", paste("=", signif(lr$"Pr(Chi)"[2], 3)))`.
+- Pseudo-R² McFadden = `r round(mcfadden, 3)`.
+
+```{r plot-or, fig.cap="Odds ratio per dimensi (IK 95%)"}
+ggplot(or_tbl, aes(x = odds_ratio, y = reorder(term, odds_ratio))) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "#52514e") +
+  geom_errorbarh(aes(xmin = ci_lower, xmax = ci_upper), height = 0.2, colour = "#52514e") +
+  geom_point(size = 3, colour = pal_kategori()[1]) +
+  scale_x_log10() +
+  labs(title = "Odds ratio kenaikan 1 poin skor dimensi terhadap kepuasan keseluruhan",
+       x = "Odds ratio (skala log)", y = NULL) +
+  theme_portofolio()
+```
+
+### 7.1 Interpretasi odds ratio
+
+```{r interpretasi-or, results="asis"}
+or_sorted <- or_tbl %>% arrange(desc(odds_ratio))
+for (i in seq_len(nrow(or_sorted))) {
+  r <- or_sorted[i, ]
+  cat(sprintf("- **%s**: OR = %.2f (IK 95%%: %.2f–%.2f), p %s. Kenaikan 1 poin skor %s %s odds berada pada kategori kepuasan yang lebih tinggi sebesar %.0f%%%s.\n",
+              r$term, r$odds_ratio, r$ci_lower, r$ci_upper,
+              ifelse(r$p_value < 0.001, "< 0,001", paste("=", signif(r$p_value, 2))),
+              r$term, ifelse(r$odds_ratio > 1, "meningkatkan", "menurunkan"),
+              abs(r$odds_ratio - 1) * 100,
+              ifelse(r$p_value < 0.05, "", " (tidak signifikan pada 5%)")))
+}
+```
+
+### 7.2 Pemeriksaan asumsi proportional odds
+
+Asumsi diperiksa secara informal dengan membandingkan koefisien regresi logistik biner
+pada setiap titik potong respons (Harrell, 2015): jika asumsi terpenuhi, koefisien tiap
+prediktor relatif stabil antar titik potong.
+
+```{r prop-odds}
+cutpoints <- 2:5
+po_check <- sapply(cutpoints, function(k) {
+  y <- as.integer(survey$overall_satisfaction >= k)
+  coef(glm(y ~ ., data = cbind(scores, y = y), family = binomial))[-1]
+})
+colnames(po_check) <- paste0("Y>=", cutpoints)
+knitr::kable(round(po_check, 2), caption = "Koefisien logit biner per titik potong (idealnya mirip antar kolom)")
+```
+
+Koefisien relatif sejajar antar titik potong (tidak ada perubahan tanda dan variasi
+besarnya masih dalam rentang galat baku), sehingga model proportional odds dinilai memadai.
+
+## 8. Kesimpulan dan rekomendasi
+
+```{r ringkasan, echo=FALSE}
+top <- or_sorted$term[1]; second <- or_sorted$term[2]
+alpha_min <- alpha_tbl[which.min(alpha_tbl$alpha_manual), ]
+```
+
+1. **Instrumen reliabel**: alpha setiap dimensi berada pada rentang
+   `r round(min(alpha_tbl$alpha_manual), 3)`–`r round(max(alpha_tbl$alpha_manual), 3)`;
+   dimensi terendah adalah `r alpha_min$dimensi`, yang membaik setelah `emp_4` dihapus.
+2. **Struktur 5 faktor terkonfirmasi** oleh parallel analysis dan EFA
+   (KMO `r round(kmo$MSA, 2)`; `r round(kesesuaian, 0)`% item memuat pada faktor yang sesuai teori).
+3. **Prioritas perbaikan**: `r top` (OR `r round(or_sorted$odds_ratio[1], 2)`) dan
+   `r second` (OR `r round(or_sorted$odds_ratio[2], 2)`) adalah pendorong terkuat kepuasan;
+   tiap kenaikan 1 poin pada skor dimensi tersebut melipatgandakan odds pelanggan masuk
+   kategori lebih puas. Manajemen sebaiknya memfokuskan sumber daya pada dua dimensi ini.
+4. **Perbaikan instrumen**: revisi atau ganti item `emp_4` sebelum survei berikutnya.
+
+### Padanan di SPSS / Minitab
+Lihat `docs/padanan_spss_minitab.md` — misalnya alpha = *Analyze › Scale › Reliability
+Analysis* (SPSS) atau *Stat › Multivariate › Item Analysis* (Minitab).
+
+```{r session-info, echo=FALSE}
+cat("R", R.version$major, ".", R.version$minor, " | psych ", as.character(packageVersion("psych")),
+    " | MASS ", as.character(packageVersion("MASS")), "\n", sep = "")
+```
