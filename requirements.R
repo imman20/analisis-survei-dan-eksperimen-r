@@ -23,7 +23,8 @@ versi <- c(
   rmarkdown   = "2.25",
   knitr       = "1.45",
   testthat    = "3.2.1",
-  renv        = "1.0.3"
+  renv        = "1.0.3",
+  lintr       = "3.1.2"
 )
 
 repos <- "https://cloud.r-project.org"

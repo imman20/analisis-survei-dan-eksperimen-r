@@ -9,6 +9,10 @@ kapabilitas** untuk pengendalian mutu produksi.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/imman20/analisis-survei-dan-eksperimen-r/actions/workflows/ci.yml/badge.svg)](https://github.com/imman20/analisis-survei-dan-eksperimen-r/actions/workflows/ci.yml)
 
+## English summary
+
+I use reproducible simulated data to demonstrate survey analysis, factorial experiments, and statistical process control in R. I evaluate reliability and factor structure for 400 survey respondents and fit an ordinal satisfaction model. In the 30-run experiment, the temperature-by-material interaction has a p-value of 0.0077. The process study estimates Cpk at 1.071, which indicates marginal capability despite initial stability. I reproduce the reports and unit tests with `Rscript run_all.R` after installing the documented R packages.
+
 ![Ringkasan tiga modul: Cronbach's alpha per dimensi, interaction plot suhu × bahan, dan peta X-bar fase I–II](assets/hero.png)
 
 ## Daftar Isi
@@ -141,8 +145,7 @@ lebih murah memberi kekuatan setara atau lebih tinggi. Ini peluang penghematan t
 | Deteksi pergeseran fase II (mulai subgrup 6) | Western Electric: subgrup 6 (aturan 2); Shewhart 3σ saja: subgrup 8; CUSUM: subgrup 8 |
 
 **Insight:** (1) proses stabil tetapi kapabilitasnya **marginal** (Cpk 1,07 < 1,33), sehingga perlu
-pengurangan variasi, bukan penyetelan pusat, karena Cp ≈ Cpk; (2) aturan Western Electric dan CUSUM
-mendeteksi pergeseran 0,75σ lebih cepat daripada batas 3σ saja; (3) lonjakan cacat lot 18–19
+pengurangan variasi, bukan penyetelan pusat, karena Cp ≈ Cpk; (2) aturan Western Electric mendeteksi pergeseran 0,75σ pada subgrup 6, lebih cepat daripada batas 3σ saja; CUSUM dan batas 3σ sama-sama memberi sinyal pada subgrup 8; (3) lonjakan cacat lot 18–19
 terdeteksi peta p dan harus diinvestigasi sebagai penyebab khusus.
 
 ## Struktur Folder
@@ -170,7 +173,7 @@ analisis-survei-dan-eksperimen-r/
 
 ## Cara Menjalankan
 
-Prasyarat: R ≥ 4.3 dan [pandoc](https://pandoc.org/) (sudah termasuk dalam RStudio).
+Prasyarat untuk pemasangan dependensi terkini: R ≥ 4.5 dan [pandoc](https://pandoc.org/) (sudah termasuk dalam RStudio).
 
 ```bash
 # 1. Clone
@@ -197,6 +200,8 @@ karena lingkungan pembuatan tidak memiliki LaTeX; untuk PDF, pasang `tinytex` la
 `html_document` menjadi `pdf_document` pada header Rmd.
 
 ## Teknologi
+
+Saya mempertahankan versi acuan laporan final pada tabel berikut. Saya menguji ulang dengan R 4.5.0 dan memakai versi itu pada CI karena dependensi transitif terkini memerlukan R ≥ 4.5. Seluruh 27 tabel hasil cocok tepat pada teks dan presisi yang ditampilkan; data, model, laporan HTML, serta gambar final dipertahankan. Rincian ada di [verifikasi penyempurnaan](docs/verifikasi_penyempurnaan.md).
 
 | Komponen | Paket / alat | Versi |
 |---|---|---|
