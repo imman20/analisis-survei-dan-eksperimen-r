@@ -1,5 +1,5 @@
 # CI: memastikan tes unit lulus dan ketiga laporan R Markdown dapat dirender
-# pada R rilis terbaru di Ubuntu. Dependensi dibaca dari DESCRIPTION.
+# Saya memakai R 4.5.0 di Ubuntu. Dependensi dibaca dari DESCRIPTION.
 name: CI
 
 on:

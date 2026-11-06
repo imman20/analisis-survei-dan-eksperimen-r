@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Saya mengunci runtime CI pada R 4.5.0 untuk dependensi transitif terkini, menambahkan lint logika NA, dan memverifikasi ulang tiga laporan tanpa mengubah output final.
+
 - Saya menambahkan English summary, memeriksa tautan README, dan mendokumentasikan verifikasi penyempurnaan.
 - Saya memberi tag `v1.0.0` pada commit terakhir `main` sebelum penyempurnaan. Riwayat repositori linear sehingga tidak ada commit merge dengan dua parent.
 

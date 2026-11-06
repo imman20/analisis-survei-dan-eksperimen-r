@@ -173,7 +173,7 @@ analisis-survei-dan-eksperimen-r/
 
 ## Cara Menjalankan
 
-Prasyarat: R ≥ 4.3 dan [pandoc](https://pandoc.org/) (sudah termasuk dalam RStudio).
+Prasyarat untuk pemasangan dependensi terkini: R ≥ 4.5 dan [pandoc](https://pandoc.org/) (sudah termasuk dalam RStudio).
 
 ```bash
 # 1. Clone
@@ -200,6 +200,8 @@ karena lingkungan pembuatan tidak memiliki LaTeX; untuk PDF, pasang `tinytex` la
 `html_document` menjadi `pdf_document` pada header Rmd.
 
 ## Teknologi
+
+Saya mempertahankan versi acuan laporan final pada tabel berikut. Saya menguji ulang dengan R 4.5.0 dan memakai versi itu pada CI karena dependensi transitif terkini memerlukan R ≥ 4.5. Seluruh 27 tabel hasil cocok tepat pada teks dan presisi yang ditampilkan; data, model, laporan HTML, serta gambar final dipertahankan. Rincian ada di [verifikasi penyempurnaan](docs/verifikasi_penyempurnaan.md).
 
 | Komponen | Paket / alat | Versi |
 |---|---|---|
